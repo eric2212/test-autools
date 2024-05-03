@@ -1,0 +1,26 @@
+name: Process Issue Information
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  process_issue:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Process Issue
+      id: process
+      run: |
+        echo "Issue title: ${{ github.event.issue.title }}"
+        echo "Issue body: ${{ github.event.issue.body }}"
+        echo "::set-output name=issue_title::${{ github.event.issue.title }}"
+        echo "::set-output name=issue_body::${{ github.event.issue.body }}"
+
+    - name: Use Processed Issue Information
+      run: |
+        echo "Processed Issue Title: ${{ steps.process.outputs.issue_title }}"
+        echo "Processed Issue Body: ${{ steps.process.outputs.issue_body }}"
