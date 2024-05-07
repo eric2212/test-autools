@@ -1,11 +1,15 @@
-name: Process Issue Information
+permissions:
+  contents: read
+  issues: write
+
+name: Process Issue Information and Delete
 
 on:
   issues:
     types: [opened]
 
 jobs:
-  process_issue:
+  process_issue_and_delete:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,3 +28,9 @@ jobs:
       run: |
         echo "Processed Issue Title: ${{ steps.process.outputs.issue_title }}"
         echo "Processed Issue Body: ${{ steps.process.outputs.issue_body }}"
+
+    - name: Delete Issue
+      uses: peter-evans/delete-issue-comment@v1
+      with:
+        issue-number: ${{ github.event.issue.number }}
+        close: true
