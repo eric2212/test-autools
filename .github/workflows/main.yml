@@ -1,36 +1,55 @@
-permissions:
-  contents: read
-  issues: write
-
-name: Process Issue Information and Delete
+name: Dịch file YAML
 
 on:
   issues:
-    types: [opened]
+    types: [opened, reopened]
 
 jobs:
-  process_issue_and_delete:
+  dich-file:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-    - name: Process Issue
-      id: process
-      run: |
-        echo "Issue title: ${{ github.event.issue.title }}"
-        echo "Issue body: ${{ github.event.issue.body }}"
-        echo "::set-output name=issue_title::${{ github.event.issue.title }}"
-        echo "::set-output name=issue_body::${{ github.event.issue.body }}"
+      - name: Tải file YAML
+        id: tai-file
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = context.issue.number;
+            const fileContent = await github.rest.issues.getIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            }).then(response => response.data.body);
 
-    - name: Use Processed Issue Information
-      run: |
-        echo "Processed Issue Title: ${{ steps.process.outputs.issue_title }}"
-        echo "Processed Issue Body: ${{ steps.process.outputs.issue_body }}"
+            const yamlContent = fileContent.match(/`yaml\n([\s\S]*?)`/)[1];
+            core.setOutput('yamlContent', yamlContent);
 
-    - name: Delete Issue
-      uses: peter-evans/delete-issue-comment@v1
-      with:
-        issue-number: ${{ github.event.issue.number }}
-        close: true
+      - name: Dịch file YAML
+        id: dich-file
+        uses: ShadowCrafter011/YAML-Translator@v1
+        with:
+          source_language: 'vi'
+          target_language: 'en'
+          yaml_content: ${{ steps.tai-file.outputs.yamlContent }}
+
+      - name: Tạo file YAML dịch
+        uses: actions/upload-artifact@v3
+        with:
+          name: yaml-dich
+          path: ${{ steps.dich-file.outputs.translatedYaml }}
+
+      - name: Thông báo hoàn thành
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = context.issue.number;
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: 'File YAML đã được dịch và tải lên thành công!'
+            });
